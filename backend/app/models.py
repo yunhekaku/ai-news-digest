@@ -1,6 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, DateTime, Text
 from app.database import Base
 
 
@@ -15,24 +14,6 @@ class Article(Base):
     summary = Column(Text, nullable=True)
     status = Column(String, default="pending")  # pending | summarized | failed
     created_at = Column(DateTime, default=datetime.utcnow)
-
-    tags = relationship("Tag", secondary="article_tags", back_populates="articles")
-
-
-class Tag(Base):
-    __tablename__ = "tags"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, nullable=False)
-
-    articles = relationship("Article", secondary="article_tags", back_populates="tags")
-
-
-class ArticleTag(Base):
-    __tablename__ = "article_tags"
-
-    article_id = Column(Integer, ForeignKey("articles.id"), primary_key=True)
-    tag_id = Column(Integer, ForeignKey("tags.id"), primary_key=True)
 
 
 class IngestionRun(Base):

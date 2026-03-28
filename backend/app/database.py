@@ -1,6 +1,10 @@
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from pydantic_settings import BaseSettings
+
+# backend/app/database.py から2階層上がプロジェクトルート
+_ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -12,7 +16,8 @@ class Settings(BaseSettings):
     gcs_bucket_name: str = ""
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_FILE)
+        extra = "ignore"
 
 
 settings = Settings()

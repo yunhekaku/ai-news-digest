@@ -28,24 +28,6 @@ export default function ArticleDetailPage() {
         {article.source_name}
         {article.published_at && ` · ${new Date(article.published_at).toLocaleDateString("ja-JP")}`}
       </div>
-      {article.tags.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          {article.tags.map((t) => (
-            <span
-              key={t.id}
-              style={{
-                background: "#e8f0fe",
-                borderRadius: 4,
-                padding: "2px 8px",
-                marginRight: 6,
-                fontSize: 12,
-              }}
-            >
-              {t.name}
-            </span>
-          ))}
-        </div>
-      )}
       {article.summary && (
         <div style={{ marginTop: 24, background: "#f9f9f9", padding: 16, borderRadius: 8 }}>
           <h2 style={{ fontSize: 16, marginTop: 0 }}>要約</h2>

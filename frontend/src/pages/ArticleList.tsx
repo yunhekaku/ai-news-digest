@@ -36,24 +36,6 @@ export default function ArticleListPage() {
               {a.published_at && ` · ${new Date(a.published_at).toLocaleDateString("ja-JP")}`}
             </div>
             {a.summary && <p style={{ marginTop: 8 }}>{a.summary}</p>}
-            {a.tags.length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                {a.tags.map((t) => (
-                  <span
-                    key={t.id}
-                    style={{
-                      background: "#e8f0fe",
-                      borderRadius: 4,
-                      padding: "2px 8px",
-                      marginRight: 6,
-                      fontSize: 12,
-                    }}
-                  >
-                    {t.name}
-                  </span>
-                ))}
-              </div>
-            )}
           </li>
         ))}
       </ul>

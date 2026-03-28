@@ -1,17 +1,11 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
-export interface Tag {
-  id: number;
-  name: string;
-}
-
 export interface ArticleList {
   id: number;
   title: string;
   source_name: string;
   published_at: string | null;
   summary: string | null;
-  tags: Tag[];
 }
 
 export interface Article extends ArticleList {

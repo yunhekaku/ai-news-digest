@@ -1,13 +1,6 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 from pydantic import BaseModel
-
-
-class TagSchema(BaseModel):
-    id: int
-    name: str
-
-    model_config = {"from_attributes": True}
 
 
 class ArticleSchema(BaseModel):
@@ -19,7 +12,6 @@ class ArticleSchema(BaseModel):
     summary: Optional[str]
     status: str
     created_at: datetime
-    tags: List[TagSchema] = []
 
     model_config = {"from_attributes": True}
 
@@ -30,7 +22,6 @@ class ArticleListSchema(BaseModel):
     source_name: str
     published_at: Optional[datetime]
     summary: Optional[str]
-    tags: List[TagSchema] = []
 
     model_config = {"from_attributes": True}
 
