@@ -16,7 +16,11 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-engine = create_engine(settings.supabase_db_url)
+# DB URL が未設定のときはローカル SQLite を使う
+_db_url = settings.supabase_db_url or "sqlite:///./local.db"
+_connect_args = {"check_same_thread": False} if _db_url.startswith("sqlite") else {}
+
+engine = create_engine(_db_url, connect_args=_connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

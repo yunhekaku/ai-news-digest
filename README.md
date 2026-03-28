@@ -74,11 +74,19 @@ docker-compose up --build
 
 **Backend**
 
+`SUPABASE_DB_URL` が未設定の場合、SQLite (`backend/local.db`) で自動起動します。
+
 ```bash
 cd backend
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
+
+- API: http://localhost:8000
+- Swagger UI: http://localhost:8000/docs
+- ヘルスチェック: `curl http://localhost:8000/health`
 
 **Frontend**
 
