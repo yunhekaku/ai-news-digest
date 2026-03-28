@@ -1,0 +1,16 @@
+name: Ingest Articles
+
+on:
+  schedule:
+    - cron: "0 1 * * *"  # 毎日 JST 10:00
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger ingest API
+        run: |
+          curl -X POST "${{ secrets.API_BASE_URL }}/api/admin/ingest" \
+            -H "Content-Type: application/json" \
+            --fail
