@@ -109,6 +109,22 @@ npm run dev
 | GET | `/api/articles/{id}` | 記事詳細 |
 | POST | `/api/admin/ingest` | 手動収集実行 |
 
+### 動作確認
+
+```bash
+# ヘルスチェック
+curl http://localhost:8000/health
+
+# 記事一覧（DB から取得）
+curl http://localhost:8000/api/articles
+
+# ページング
+curl "http://localhost:8000/api/articles?skip=0&limit=10"
+
+# Swagger UI（ブラウザで開く）
+open http://localhost:8000/docs
+```
+
 ## バッチ処理
 
 GitHub Actions (`ingest.yml`) が毎日 JST 10:00 に `/api/admin/ingest` を呼び出す。
