@@ -15,12 +15,16 @@ export default function ArticleListPage() {
   }, []);
 
   if (loading) return <p style={{ padding: 16 }}>読み込み中...</p>;
-  if (error) return <p style={{ padding: 16, color: "red" }}>{error}</p>;
 
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: 16 }}>
       <h1>AI ニュース</h1>
-      {articles.length === 0 && <p>記事がありません。</p>}
+      {error && (
+        <p style={{ color: "#999", background: "#f5f5f5", padding: 12, borderRadius: 6, fontSize: 14 }}>
+          バックエンドに接続できません。<code>uvicorn app.main:app --reload</code> を起動してください。
+        </p>
+      )}
+      {!error && articles.length === 0 && <p>記事がありません。</p>}
       <ul style={{ listStyle: "none", padding: 0 }}>
         {articles.map((a) => (
           <li key={a.id} style={{ borderBottom: "1px solid #eee", padding: "16px 0" }}>

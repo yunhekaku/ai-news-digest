@@ -20,6 +20,15 @@ export interface Article extends ArticleList {
   created_at: string;
 }
 
+export async function fetchHealth(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE_URL}/health`);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchArticles(skip = 0, limit = 50): Promise<ArticleList[]> {
   const res = await fetch(`${BASE_URL}/api/articles?skip=${skip}&limit=${limit}`);
   if (!res.ok) throw new Error("Failed to fetch articles");

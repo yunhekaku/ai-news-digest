@@ -92,9 +92,13 @@ uvicorn app.main:app --reload
 
 ```bash
 cd frontend
-npm install
+npm install   # 初回のみ
 npm run dev
 ```
+
+- UI: http://localhost:3000
+- バックエンドが未起動でも画面は開く（接続できない旨のメッセージを表示）
+- バックエンドとの通信は Vite の dev proxy 経由（`/api`, `/health` → `http://localhost:8000`）
 
 ## API
 
