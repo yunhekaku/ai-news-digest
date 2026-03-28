@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db, settings
 from app.models import Article, IngestionRun
@@ -20,6 +20,15 @@ RSS_FEEDS = [
     "https://openai.com/blog/rss/",
     "https://www.anthropic.com/news/rss",
 ]
+
+
+def verify_token(authorization: str = Header(default="")):
+    """ADMIN_TOKEN が設定されているときのみ検証する。未設定はローカル開発用として許可。"""
+    if not settings.admin_token:
+        return
+    expected = f"Bearer {settings.admin_token}"
+    if authorization != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 def fetch_articles_from_feeds() -> list[dict]:
@@ -70,54 +79,69 @@ def summarize(text: str) -> str:
         return ""
 
 
-@router.post("/ingest", response_model=IngestResponse)
-def ingest(db: Session = Depends(get_db)):
+def _run_ingest(run_id: int):
+    """バックグラウンドで実行される本体。DB セッションを独立して取得する。"""
+    from app.database import SessionLocal
+    db = SessionLocal()
+    try:
+        run = db.query(IngestionRun).filter(IngestionRun.id == run_id).first()
+        inserted = 0
+        failed = 0
+
+        for raw in fetch_articles_from_feeds():
+            if not raw["article_url"]:
+                failed += 1
+                continue
+            if db.query(Article).filter(Article.article_url == raw["article_url"]).first():
+                continue
+            try:
+                text = extract_text(raw["article_url"])
+                summary = summarize(text)
+                pub = datetime(*raw["published_at"][:6]) if raw["published_at"] else None
+                db.add(Article(
+                    source_name=raw["source_name"],
+                    article_url=raw["article_url"],
+                    title=raw["title"],
+                    published_at=pub,
+                    summary=summary,
+                    status="summarized" if summary else "pending",
+                ))
+                db.commit()
+                inserted += 1
+            except Exception as e:
+                logger.error(f"Failed to process {raw['article_url']}: {e}")
+                failed += 1
+
+        run.status = "completed"
+        run.total_inserted = inserted
+        run.total_failed = failed
+        db.commit()
+        logger.info(f"Ingest run {run_id} completed: inserted={inserted} failed={failed}")
+    except Exception as e:
+        logger.error(f"Ingest run {run_id} failed: {e}")
+        if run:
+            run.status = "failed"
+            db.commit()
+    finally:
+        db.close()
+
+
+@router.post("/ingest", response_model=IngestResponse, status_code=202)
+def ingest(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_token),
+):
     run = IngestionRun(started_at=datetime.utcnow(), status="running")
     db.add(run)
     db.commit()
     db.refresh(run)
 
-    inserted = 0
-    failed = 0
-
-    raw_articles = fetch_articles_from_feeds()
-    for raw in raw_articles:
-        if not raw["article_url"]:
-            failed += 1
-            continue
-        existing = db.query(Article).filter(Article.article_url == raw["article_url"]).first()
-        if existing:
-            continue
-        try:
-            text = extract_text(raw["article_url"])
-            summary = summarize(text)
-            pub = None
-            if raw["published_at"]:
-                pub = datetime(*raw["published_at"][:6])
-            article = Article(
-                source_name=raw["source_name"],
-                article_url=raw["article_url"],
-                title=raw["title"],
-                published_at=pub,
-                summary=summary,
-                status="summarized" if summary else "pending",
-            )
-            db.add(article)
-            db.commit()
-            inserted += 1
-        except Exception as e:
-            logger.error(f"Failed to process article {raw['article_url']}: {e}")
-            failed += 1
-
-    run.status = "completed"
-    run.total_inserted = inserted
-    run.total_failed = failed
-    db.commit()
-    db.refresh(run)
+    background_tasks.add_task(_run_ingest, run.id)
 
     return IngestResponse(
         run_id=run.id,
         status=run.status,
-        total_inserted=inserted,
-        total_failed=failed,
+        total_inserted=0,
+        total_failed=0,
     )

@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    admin_token: str = ""
     supabase_db_url: str = ""
     anthropic_api_key: str = ""
     llm_api_key: str = ""
