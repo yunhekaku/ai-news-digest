@@ -21,7 +21,7 @@ PUBLIC_ARTICLES_URL = os.getenv(
     "https://yunhekaku.github.io/ai-news-digest/articles.json",
 )
 MAX_ITEMS = int(os.getenv("MAX_ITEMS", "30"))
-MAX_PER_SOURCE = int(os.getenv("MAX_PER_SOURCE", "8"))
+MAX_PER_SOURCE = int(os.getenv("MAX_PER_SOURCE", "4"))
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "12"))
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
@@ -36,12 +36,20 @@ RSS_SOURCES = [
         "url": "https://openai.com/news/rss.xml",
     },
     {
-        "name": "Anthropic News",
-        "url": "https://www.anthropic.com/news/rss",
+        "name": "Google DeepMind Blog",
+        "url": "https://deepmind.google/blog/rss.xml",
     },
     {
         "name": "Google AI Blog",
         "url": "https://blog.google/technology/ai/rss/",
+    },
+    {
+        "name": "Microsoft AI Blog",
+        "url": "https://blogs.microsoft.com/ai/feed/",
+    },
+    {
+        "name": "Hugging Face Blog",
+        "url": "https://huggingface.co/blog/feed.xml",
     },
 ]
 
@@ -293,10 +301,17 @@ source: {source}
 形式:
 {{
   "summary": "日本語で2〜3文。事実ベースで短く。",
-  "importance_score": 1から10の整数,
+  "importance_score": 1から10の整数。今日読む優先度。平均は5〜6。10は業界全体に大きな影響がある記事だけ。
   "reason": "毎日30秒で見る人にとって重要な理由を1文で。",
   "tags": ["最大3個の短いタグ"]
 }}
+
+採点ルール:
+- 10: 業界全体に大きな影響がある発表、規制、安全性、主要モデルの大幅更新
+- 8〜9: 主要企業・主要モデル・開発者体験に明確な影響がある記事
+- 6〜7: 今日読む価値はあるが、影響範囲が限定的な記事
+- 1〜5: 導入事例、イベント告知、まとめ記事、周辺的な話題
+- 全体的に高くしすぎないでください。迷ったら低めにしてください。
 """
 
 SUMMARY_SCHEMA = {
@@ -308,7 +323,7 @@ SUMMARY_SCHEMA = {
         },
         "importance_score": {
             "type": "integer",
-            "description": "1から10の整数。10が最重要。",
+            "description": "今日読む優先度。平均は5〜6。10は業界全体に大きな影響がある記事だけ。",
             "minimum": 1,
             "maximum": 10,
         },
@@ -362,21 +377,27 @@ def fallback_summary(text: str, title: str, source: str) -> dict[str, Any]:
 
 def estimate_score(title: str, text: str) -> int:
     haystack = f"{title} {text}".lower()
-    score = 5
-    for keyword in [
-        "openai",
-        "anthropic",
-        "google",
-        "agent",
-        "model",
-        "benchmark",
-        "research",
-        "security",
-        "regulation",
-    ]:
+    score = 4
+    weighted_keywords = {
+        "openai": 1,
+        "anthropic": 1,
+        "google": 1,
+        "agent": 1,
+        "model": 1,
+        "benchmark": 1,
+        "research": 1,
+        "security": 2,
+        "regulation": 2,
+        "safety": 2,
+        "frontier": 1,
+    }
+    for keyword, weight in weighted_keywords.items():
         if keyword in haystack:
-            score += 1
-    return min(score, 9)
+            score += weight
+    for low_priority in ["event", "podcast", "video", "recap", "quiz", "case study"]:
+        if low_priority in haystack:
+            score -= 1
+    return max(1, min(score, 8))
 
 
 def infer_tags(text: str) -> list[str]:

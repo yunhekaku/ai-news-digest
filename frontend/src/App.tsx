@@ -148,7 +148,7 @@ function formatDateTime(value: string | null | undefined) {
 
 function scoreClass(score: number) {
   if (score === 10) return "score-gold";
-  if (score >= 7) return "score-silver";
-  if (score >= 4) return "score-bronze";
+  if (score >= 8) return "score-silver";
+  if (score >= 6) return "score-bronze";
   return "score-muted";
 }
