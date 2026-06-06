@@ -12,7 +12,7 @@ AI News Digest is a small public web app for quickly scanning AI-related news. A
 
 - Frontend: React, TypeScript, Vite
 - Ingestion: Python, feedparser, BeautifulSoup
-- Optional LLM: Anthropic API
+- Optional LLM: Gemini API
 - Automation: GitHub Actions
 - Hosting: GitHub Pages
 - Data: static JSON
@@ -21,8 +21,9 @@ AI News Digest is a small public web app for quickly scanning AI-related news. A
 
 - Fetches AI-related RSS feeds
 - Generates `frontend/public/articles.json`
-- Supports optional LLM summaries, scores, reasons, and tags
+- Supports optional Gemini summaries, scores, reasons, and tags
 - Falls back to extracted text and keyword-based scoring without an API key
+- Reuses the previously deployed `articles.json` as a summary cache
 - Displays articles sorted by importance or publish date
 - Deploys automatically to GitHub Pages
 
@@ -69,10 +70,12 @@ http://localhost:3000
 
 | Variable | Required | Description |
 |---|---:|---|
-| `ANTHROPIC_API_KEY` | No | Enables LLM-generated summaries and metadata |
-| `ANTHROPIC_MODEL` | No | Defaults to `claude-3-5-haiku-latest` |
+| `LLM_PROVIDER` | No | `gemini` or `none`; default is `gemini` |
+| `GEMINI_API_KEY` | No | Enables Gemini-generated summaries and metadata |
+| `GEMINI_MODEL` | No | Defaults to `gemini-2.5-flash-lite` |
 | `MAX_ITEMS` | No | Maximum articles to output; default is `30` |
 | `MAX_PER_SOURCE` | No | Maximum RSS entries per source; default is `8` |
+| `PUBLIC_ARTICLES_URL` | No | Existing deployed JSON used as a cache |
 
 ## Deployment
 

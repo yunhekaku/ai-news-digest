@@ -16,9 +16,15 @@ from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_PATH = ROOT / "frontend" / "public" / "articles.json"
+PUBLIC_ARTICLES_URL = os.getenv(
+    "PUBLIC_ARTICLES_URL",
+    "https://yunhekaku.github.io/ai-news-digest/articles.json",
+)
 MAX_ITEMS = int(os.getenv("MAX_ITEMS", "30"))
 MAX_PER_SOURCE = int(os.getenv("MAX_PER_SOURCE", "8"))
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "12"))
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
 RSS_SOURCES = [
     {
@@ -95,10 +101,32 @@ def main() -> None:
 
 
 def load_previous() -> dict[str, dict[str, Any]]:
+    remote = load_previous_from_url(PUBLIC_ARTICLES_URL)
+    if remote:
+        return remote
+
     if not OUTPUT_PATH.exists():
         return {}
     try:
         data = json.loads(OUTPUT_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return {
+        article["url"]: article
+        for article in data.get("articles", [])
+        if isinstance(article, dict) and article.get("url")
+    }
+
+
+def load_previous_from_url(url: str) -> dict[str, dict[str, Any]]:
+    if not url:
+        return {}
+    try:
+        response = requests.get(url, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException:
+        return {}
     except json.JSONDecodeError:
         return {}
     return {
@@ -147,7 +175,6 @@ def enrich_articles(
     previous: dict[str, dict[str, Any]],
 ) -> list[Article]:
     articles: list[Article] = []
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
 
     for item in fetched:
         cached = previous.get(item["url"])
@@ -168,7 +195,7 @@ def enrich_articles(
             continue
 
         text = extract_article_text(item["url"]) or item["rss_summary"] or item["title"]
-        result = summarize_with_llm(text, item["title"], item["source"], api_key)
+        result = summarize_with_llm(text, item["title"], item["source"])
         articles.append(
             Article(
                 id=item["id"],
@@ -207,36 +234,40 @@ def summarize_with_llm(
     text: str,
     title: str,
     source: str,
-    api_key: str,
 ) -> dict[str, Any]:
+    if LLM_PROVIDER == "none":
+        return fallback_summary(text, title, source)
+
+    return summarize_with_gemini(text, title, source)
+
+
+def summarize_with_gemini(text: str, title: str, source: str) -> dict[str, Any]:
+    api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
         return fallback_summary(text, title, source)
 
     try:
-        import anthropic
+        from google import genai
+        from google.genai import types
 
-        client = anthropic.Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"),
-            max_tokens=700,
-            messages=[
-                {
-                    "role": "user",
-                    "content": PROMPT.format(
-                        title=title,
-                        source=source,
-                        text=text[:4000],
-                    ),
-                }
-            ],
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=PROMPT.format(
+                title=title,
+                source=source,
+                text=text[:4000],
+            ),
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=SUMMARY_SCHEMA,
+                temperature=0.2,
+                max_output_tokens=700,
+            ),
         )
-        raw = message.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.strip("`")
-            raw = raw.removeprefix("json").strip()
-        return normalize_summary(json.loads(raw), text, title, source)
+        return normalize_summary(json.loads(response.text), text, title, source)
     except Exception as exc:
-        print(f"LLM fallback for {title}: {exc}")
+        print(f"Gemini fallback for {title}: {exc}")
         return fallback_summary(text, title, source)
 
 
@@ -257,6 +288,34 @@ source: {source}
   "tags": ["最大3個の短いタグ"]
 }}
 """
+
+SUMMARY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {
+            "type": "string",
+            "description": "日本語で2〜3文。事実ベースで短く。",
+        },
+        "importance_score": {
+            "type": "integer",
+            "description": "1から10の整数。10が最重要。",
+            "minimum": 1,
+            "maximum": 10,
+        },
+        "reason": {
+            "type": "string",
+            "description": "毎日30秒で見る人にとって重要な理由を1文で。",
+        },
+        "tags": {
+            "type": "array",
+            "description": "最大3個の短いタグ。",
+            "items": {"type": "string"},
+            "maxItems": 3,
+        },
+    },
+    "required": ["summary", "importance_score", "reason", "tags"],
+    "additionalProperties": False,
+}
 
 
 def normalize_summary(
