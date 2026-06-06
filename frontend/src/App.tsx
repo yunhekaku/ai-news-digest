@@ -70,7 +70,7 @@ export default function App() {
         {topStories.length > 0 ? (
           topStories.map((article) => (
             <a className="top-story" href={article.url} key={article.id} target="_blank" rel="noreferrer">
-              <span className="score">{article.importance_score}</span>
+              <span className={`score ${scoreClass(article.importance_score)}`}>{article.importance_score}</span>
               <span>{article.title}</span>
             </a>
           ))
@@ -93,7 +93,10 @@ export default function App() {
       <section className="article-list" aria-label="Articles">
         {articles.map((article) => (
           <article className="article" key={article.id}>
-            <div className="article-score" aria-label={`Importance ${article.importance_score}`}>
+            <div
+              className={`article-score ${scoreClass(article.importance_score)}`}
+              aria-label={`Importance ${article.importance_score}`}
+            >
               {article.importance_score}
             </div>
             <div className="article-body">
@@ -141,4 +144,11 @@ function formatDateTime(value: string | null | undefined) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function scoreClass(score: number) {
+  if (score === 10) return "score-gold";
+  if (score >= 7) return "score-silver";
+  if (score >= 4) return "score-bronze";
+  return "score-muted";
 }

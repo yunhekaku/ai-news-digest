@@ -101,9 +101,27 @@ h1 {
   width: 38px;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: #165f54;
-  color: #ffffff;
   font-weight: 800;
+}
+
+.score-gold {
+  background: #c7921f;
+  color: #1f1605;
+}
+
+.score-silver {
+  background: #b8c0c4;
+  color: #172126;
+}
+
+.score-bronze {
+  background: #a76c3d;
+  color: #ffffff;
+}
+
+.score-muted {
+  background: #60706b;
+  color: #ffffff;
 }
 
 .empty,
