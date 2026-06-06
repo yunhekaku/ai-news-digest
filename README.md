@@ -23,7 +23,8 @@ AI News Digest is a small public web app for quickly scanning AI-related news. A
 - Generates `frontend/public/articles.json`
 - Supports optional Gemini summaries, scores, reasons, and tags
 - Falls back to extracted text and keyword-based scoring without an API key
-- Reuses the previously deployed `articles.json` as a summary cache
+- Reuses Gemini summaries from the previously deployed `articles.json`
+- Regenerates old fallback summaries when Gemini is available
 - Displays articles sorted by importance or publish date
 - Deploys automatically to GitHub Pages
 

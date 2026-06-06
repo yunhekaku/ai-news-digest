@@ -82,6 +82,7 @@ class Article:
     importance_score: int
     reason: str
     tags: list[str]
+    summary_provider: str
 
 
 def main() -> None:
@@ -178,7 +179,7 @@ def enrich_articles(
 
     for item in fetched:
         cached = previous.get(item["url"])
-        if cached:
+        if cached and can_reuse_cached_summary(cached):
             articles.append(
                 Article(
                     id=str(cached.get("id") or item["id"]),
@@ -190,6 +191,7 @@ def enrich_articles(
                     importance_score=int(cached.get("importance_score") or 5),
                     reason=str(cached.get("reason") or "前回生成済みの記事です。"),
                     tags=list(cached.get("tags") or []),
+                    summary_provider=str(cached.get("summary_provider") or "fallback"),
                 )
             )
             continue
@@ -207,10 +209,18 @@ def enrich_articles(
                 importance_score=result["importance_score"],
                 reason=result["reason"],
                 tags=result["tags"],
+                summary_provider=result["summary_provider"],
             )
         )
 
     return articles
+
+
+def can_reuse_cached_summary(cached: dict[str, Any]) -> bool:
+    provider = str(cached.get("summary_provider") or "fallback")
+    if LLM_PROVIDER == "none":
+        return provider == "fallback"
+    return provider == LLM_PROVIDER
 
 
 def extract_article_text(url: str) -> str:
@@ -265,7 +275,7 @@ def summarize_with_gemini(text: str, title: str, source: str) -> dict[str, Any]:
                 max_output_tokens=700,
             ),
         )
-        return normalize_summary(json.loads(response.text), text, title, source)
+        return normalize_summary(json.loads(response.text), text, title, source, "gemini")
     except Exception as exc:
         print(f"Gemini fallback for {title}: {exc}")
         return fallback_summary(text, title, source)
@@ -323,6 +333,7 @@ def normalize_summary(
     text: str,
     title: str,
     source: str,
+    provider: str,
 ) -> dict[str, Any]:
     fallback = fallback_summary(text, title, source)
     summary = clean_text(str(data.get("summary") or fallback["summary"]))
@@ -333,6 +344,7 @@ def normalize_summary(
         "importance_score": clamp_score(data.get("importance_score", 5)),
         "reason": reason[:240],
         "tags": [clean_text(str(tag))[:24] for tag in tags[:3] if clean_text(str(tag))],
+        "summary_provider": provider,
     }
 
 
@@ -344,6 +356,7 @@ def fallback_summary(text: str, title: str, source: str) -> dict[str, Any]:
         "importance_score": estimate_score(title, body),
         "reason": f"{source} のAI関連ニュースです。",
         "tags": infer_tags(f"{title} {body}"),
+        "summary_provider": "fallback",
     }
 
 

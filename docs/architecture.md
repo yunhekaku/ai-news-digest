@@ -57,7 +57,8 @@ GitHub Actions
       "summary": "短い要約",
       "importance_score": 8,
       "reason": "重要な理由",
-      "tags": ["OpenAI", "Model"]
+      "tags": ["OpenAI", "Model"],
+      "summary_provider": "gemini"
     }
   ]
 }
@@ -82,3 +83,5 @@ GitHub Actions
 - `tags`
 
 未設定の場合は、本文抜粋、簡易スコア、キーワードタグでフォールバックする。
+
+既存の `articles.json` はキャッシュとして使う。ただし `summary_provider` が現在の `LLM_PROVIDER` と一致しない場合は再生成する。

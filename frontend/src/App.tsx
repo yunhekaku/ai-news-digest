@@ -11,6 +11,7 @@ type Article = {
   importance_score: number;
   reason: string;
   tags: string[];
+  summary_provider: string;
 };
 
 type Digest = {
