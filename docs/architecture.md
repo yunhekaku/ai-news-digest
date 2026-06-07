@@ -70,8 +70,9 @@ GitHub Actions
 
 - TechCrunch AI
 - OpenAI News
-- Anthropic News
+- Anthropic News (unofficial generated RSS)
 - Google AI Blog
+- Hugging Face Blog
 
 ## LLM動作
 
