@@ -77,6 +77,7 @@ http://localhost:3000
 | `GEMINI_MODEL` | No | Defaults to `gemini-2.5-flash-lite` |
 | `MAX_ITEMS` | No | Maximum articles to output; default is `30` |
 | `MAX_PER_SOURCE` | No | Maximum RSS entries per source; default is `4` |
+| `MAX_ARTICLE_AGE_DAYS` | No | Excludes articles older than this many days; default is `7` |
 | `PUBLIC_ARTICLES_URL` | No | Existing deployed JSON used as a cache |
 
 ## Deployment

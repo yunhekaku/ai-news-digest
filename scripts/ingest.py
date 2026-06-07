@@ -4,7 +4,7 @@ import json
 import os
 import re
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
@@ -22,6 +22,7 @@ PUBLIC_ARTICLES_URL = os.getenv(
 )
 MAX_ITEMS = int(os.getenv("MAX_ITEMS", "30"))
 MAX_PER_SOURCE = int(os.getenv("MAX_PER_SOURCE", "4"))
+MAX_ARTICLE_AGE_DAYS = int(os.getenv("MAX_ARTICLE_AGE_DAYS", "7"))
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "12"))
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
@@ -156,6 +157,9 @@ def fetch_articles() -> list[dict[str, Any]]:
                 continue
             if not is_relevant(title, rss_summary, source["name"], url):
                 continue
+            published_at = parse_date(entry)
+            if is_too_old(published_at):
+                continue
             seen.add(url)
             articles.append(
                 {
@@ -163,7 +167,7 @@ def fetch_articles() -> list[dict[str, Any]]:
                     "title": title,
                     "url": url,
                     "source": source["name"],
-                    "published_at": parse_date(entry),
+                    "published_at": published_at,
                     "rss_summary": rss_summary,
                 }
             )
@@ -438,6 +442,14 @@ def parse_date(entry: Any) -> str | None:
     if parsed:
         return datetime(*parsed[:6], tzinfo=timezone.utc).isoformat()
     return None
+
+
+def is_too_old(value: str | None) -> bool:
+    if not value or MAX_ARTICLE_AGE_DAYS <= 0:
+        return False
+    published_at = datetime.fromisoformat(value)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_ARTICLE_AGE_DAYS)
+    return published_at < cutoff
 
 
 def clean_text(value: str) -> str:
